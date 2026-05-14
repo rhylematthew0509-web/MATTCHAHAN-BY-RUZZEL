@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="layout">
+
+    <!-- 🔹 SIDEBAR -->
+    <div class="sidebar">
+
+        <h2>School System</h2>
+
+        {% if session.get('role') == 'admin' %}
+            <a href="/admin-dashboard">Dashboard</a>
+            <a href="/teachers">Teachers</a>
+            <a href="/sections">Sections</a>
+            <a href="/subjects">Subjects</a>
+            <a href="/students">Students</a>
+            <a href="/assign">Assign Teacher</a>
+            <a href="/assign-section-subject">Assign Subjects</a>
+            <a href="/admin-grade-review">Grade Review</a>
+            <a href="/all-grades">All Grades</a>
+        {% endif %}
+
+        {% if session.get('role') == 'teacher' %}
+            <a href="/teacher-dashboard">Dashboard</a>
+            <a href="/view-submitted-grades">Submitted Grades</a>
+        {% endif %}
+
+        <hr>
+        <a href="/logout">Logout</a>
+
+    </div>
+
+    <!-- 🔹 MAIN CONTENT -->
+    <div class="main-content">
+        {% block content %}{% endblock %}
+    </div>
+
+</div>
+
+</body>
+</html>

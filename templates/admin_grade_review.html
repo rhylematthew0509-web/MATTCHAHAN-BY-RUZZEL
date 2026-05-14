@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container">
+<div class="card">
+
+<h1>Grade Review Panel</h1>
+
+<!-- FILTERS -->
+<form method="GET">
+
+    <label>Subject:</label>
+    <select name="subject">
+        <option value="">All</option>
+        {% for s in subjects %}
+        <option value="{{ s[0] }}">{{ s[1] }}</option>
+        {% endfor %}
+    </select>
+
+    <label>Status:</label>
+    <select name="status">
+        <option value="">All</option>
+        <option value="draft">Draft</option>
+        <option value="submitted">Submitted</option>
+        <option value="approved">Approved</option>
+    </select>
+
+    <button type="submit">Filter</button>
+</form>
+
+<br>
+
+<!-- TABLE -->
+<table>
+    <tr>
+        <th>Subject</th>
+        <th>Teacher</th>
+        <th>Total Grades</th>
+        <th>Status</th>
+        <th>Action</th>
+    </tr>
+
+    {% for d in data %}
+    <tr>
+        <td>{{ d[1] }}</td>
+        <td>{{ d[2] }}</td>
+        <td>{{ d[3] }}</td>
+        <td>{{ d[4] }}</td>
+        <td>
+
+            {% if d[4] == 'submitted' %}
+                <a href="/approve-grades/{{ d[0] }}">Approve</a>
+            {% elif d[4] == 'approved' %}
+                ✔ Approved
+            {% else %}
+                Draft
+            {% endif %}
+
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+<br>
+<a href="/admin-dashboard">← Back</a>
+
+</div>
+</div>
+
+{% endblock %}

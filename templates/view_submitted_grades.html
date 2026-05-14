@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container">
+<div class="card">
+
+<h1>My Submitted Grades</h1>
+
+<table>
+    <tr>
+        <th>Student</th>
+        <th>Subject</th>
+        <th>Grade</th>
+        <th>Quarter</th>
+        <th>Status</th>
+    </tr>
+
+    {% for g in grades %}
+    <tr>
+        <td>{{ g[0] }}</td>
+        <td>{{ g[1] }}</td>
+        <td>{{ g[2] }}</td>
+        <td>{{ g[3] }}</td>
+        <td>
+
+            {% if g[4] == 'submitted' %}
+                <span style="color: orange;">Submitted</span>
+            {% elif g[4] == 'approved' %}
+                <span style="color: green;">Approved</span>
+            {% else %}
+                <span style="color: gray;">Draft</span>
+            {% endif %}
+
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+<br>
+<a href="/teacher-dashboard">← Back to Dashboard</a>
+
+</div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <h1>Sync Teacher Account</h1>
+        
+        <p>Complete the teacher profile for user: <strong>{{ user[1] }}</strong></p>
+
+        <form method="POST">
+            <label>Name:</label>
+            <input type="text" name="name" required placeholder="Enter teacher name">
+
+            <label>Email:</label>
+            <input type="email" name="email" required placeholder="Enter email">
+
+            <label>Department:</label>
+            <input type="text" name="department" required placeholder="Enter department">
+
+            <button type="submit">✓ Sync Teacher</button>
+        </form>
+
+        <br>
+        <a href="/teachers">← Back to Teachers</a>
+    </div>
+</div>
+{% endblock %}

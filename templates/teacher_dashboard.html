@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Teacher Dashboard</h1>
+
+<h3>Your Assigned Subjects</h3>
+
+<table>
+    <tr>
+        <th>Subject</th>
+        <th>Grade Level</th>
+        <th>Action</th>
+    </tr>
+
+    {% for s in subjects %}
+    <tr>
+        <td>{{ s[1] }}</td>
+        <td>{{ s[2] }}</td>
+        <td>
+            <a href="/input-grades/{{ s[0] }}">Input Grades</a> |
+            <a href="/submit-grades/{{ s[0] }}">Submit Grades</a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock %}

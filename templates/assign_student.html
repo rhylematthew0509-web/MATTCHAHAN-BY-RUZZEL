@@ -1,0 +1,30 @@
+<h2>Assign Student to Subject</h2>
+
+<form method="POST">
+
+    Student:
+    <select name="student_id">
+        {% for s in students %}
+        <option value="{{ s[0] }}">{{ s[1] }}</option>
+        {% endfor %}
+    </select>
+
+    <br><br>
+
+    Subject:
+    <select name="subject_id">
+        {% for sub in subjects %}
+        <option value="{{ sub[0] }}">{{ sub[1] }}</option>
+        {% endfor %}
+    </select>
+
+    <br><br>
+
+    Section:
+    <input name="section">
+
+    <br><br>
+
+    <button type="submit">Assign</button>
+
+</form>

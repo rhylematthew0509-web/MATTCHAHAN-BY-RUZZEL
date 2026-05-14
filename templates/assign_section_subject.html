@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container">
+
+    <div class="card card-form">
+
+        <h1>Assign Subject to Section</h1>
+
+        <form method="POST">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Section</label>
+                    <select name="section_id" required>
+                        <option value="" disabled selected>Select Section</option>
+                        {% for sec in sections %}
+                        <option value="{{ sec[0] }}">
+                            Grade {{ sec[1] }} - {{ sec[2] }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Subject</label>
+                    <select name="subject_id" required>
+                        <option value="" disabled selected>Select Subject</option>
+                        {% for sub in subjects %}
+                        <option value="{{ sub[0] }}">
+                            {{ sub[1] }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit">Assign</button>
+            </div>
+
+        </form>
+
+        <a href="/admin-dashboard">← Back</a>
+
+    </div>
+
+</div>
+
+{% endblock %}

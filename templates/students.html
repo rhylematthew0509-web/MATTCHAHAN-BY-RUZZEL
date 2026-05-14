@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container">
+
+    <h1>Students List</h1>
+
+    <div class="students-header">
+        <a href="/add-student" class="btn-add">+ Add Student</a>
+        
+        <form method="GET" action="/students" class="filter-form">
+            <label>Filter by Section:</label>
+            <select name="section" onchange="this.form.submit()">
+                <option value="">All Sections</option>
+                {% for sec in sections %}
+                <option value="{{ sec[0] }}" {% if request.args.get('section') == sec[0]|string %}selected{% endif %}>
+                    Grade {{ sec[1] }} - {{ sec[2] }}
+                </option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+
+    <!-- 🔥 TABLE INSIDE A CARD -->
+    <div class="card">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Grade Level</th>
+                    <th>Section</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in students %}
+                <tr>
+                    <td>{{ s[0] }}</td>
+                    <td>{{ s[1] }}</td>
+                    <td>{{ s[2] }}</td>
+                    <td>Grade {{ s[3] }} - {{ s[4] }}</td>
+                    <td>
+                        <a href="/edit-student/{{ s[0] }}">Edit</a> |
+                        <a href="/delete-student/{{ s[0] }}">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <a href="/admin-dashboard">← Back to Dashboard</a>
+
+</div>
+
+{% endblock %}

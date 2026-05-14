@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Submitted Grades</h2>
+
+<table border="1" cellpadding="10">
+    <tr>
+        <th>Student</th>
+        <th>Subject</th>
+        <th>Grade</th>
+        <th>Quarter</th>
+        <th>Status</th>
+    </tr>
+
+    {% for g in grades %}
+    <tr>
+        <td>{{ g[0] }}</td>
+        <td>{{ g[1] }}</td>
+        <td>{{ g[2] }}</td>
+        <td>{{ g[3] }}</td>
+        <td>{{ g[4] }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<br>
+<a href="/teacher-dashboard">Back</a>
+{% endblock %}

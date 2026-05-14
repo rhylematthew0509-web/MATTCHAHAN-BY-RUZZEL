@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container">
+    <div class="card">
+
+        <h1>Sections List</h1>
+
+        <a href="/add-section">➕ Add Section</a>
+
+        <br><br>
+
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Section</th>
+                <th>Actions</th>
+            </tr>
+
+            {% for sec in sections %}
+<tr>
+    <td>{{ sec[0] }}</td>
+    <td>Grade {{ sec[1] }} - {{ sec[2] }}</td>
+    <td>
+        <a href="/edit-section/{{ sec[0] }}">Edit</a> |
+        <a href="/delete-section/{{ sec[0] }}"
+           onclick="return confirm('Are you sure you want to delete this section?')">
+           Delete
+        </a>
+    </td>
+</tr>
+{% endfor %}
+        </table>
+
+        <br>
+        <a href="/admin-dashboard">← Back to Dashboard</a>
+
+    </div>
+</div>
+
+{% endblock %}

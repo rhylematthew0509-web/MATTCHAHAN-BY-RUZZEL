@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container">
+
+    <div class="card card-form">
+
+        <h1>Add Subject</h1>
+
+        <form method="POST">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Subject Name</label>
+                    <select name="subject_name" required>
+                        <option value="" disabled selected>Select Subject</option>
+                        <option value="Filipino">Filipino</option>
+                        <option value="Mathematics">Mathematics</option>
+                        <option value="English">English</option>
+                        <option value="Science">Science</option>
+                        <option value="TLE">TLE</option>
+                        <option value="AP">AP</option>
+                        <option value="ESP">ESP</option>
+                        <option value="MAPEH">MAPEH</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Grade Level</label>
+                    <select name="grade_level" required>
+                        <option value="" disabled selected>Select Grade Level</option>
+                        <option value="7">Grade 7</option>
+                        <option value="8">Grade 8</option>
+                        <option value="9">Grade 9</option>
+                        <option value="10">Grade 10</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit">Save</button>
+            </div>
+
+        </form>
+
+        <a href="/subjects">← Back to Subjects List</a>
+
+    </div>
+
+</div>
+
+{% endblock %}

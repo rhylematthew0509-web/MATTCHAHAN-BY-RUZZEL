@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container">
+
+    <div class="card">
+
+        <h1>Input Grades</h1>
+
+        <form method="POST">
+
+            <label>Quarter</label><br>
+            <input name="quarter" placeholder="e.g. Q1" required>
+            <br><br>
+
+            <table>
+                <tr>
+                    <th>Student</th>
+                    <th>Grade</th>
+                </tr>
+
+                {% for s in students %}
+                <tr>
+                    <td>{{ s[1] }}</td>
+                    <td>
+                        <input 
+                            name="grade_{{ s[0] }}" 
+                            type="number" 
+                            step="0.01" 
+                            required
+                        >
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+
+            <br>
+
+            <button type="submit">Submit Grades</button>
+
+        </form>
+
+        <br>
+        <a href="/teacher-dashboard">← Back to Dashboard</a>
+
+    </div>
+
+</div>
+
+{% endblock %}

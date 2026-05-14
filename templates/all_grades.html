@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container">
+<div class="card">
+
+<h1>Admin Grade Review</h1>
+
+<table>
+    <tr>
+        <th>Student</th>
+        <th>Subject</th>
+        <th>Teacher</th>
+        <th>Grade</th>
+        <th>Quarter</th>
+        <th>Status</th>
+        <th>Action</th>
+    </tr>
+
+    {% for g in grades %}
+    <tr>
+        <td>{{ g[1] }}</td>
+        <td>{{ g[2] }}</td>
+        <td>{{ g[3] }}</td>
+        <td>{{ g[4] }}</td>
+        <td>{{ g[5] }}</td>
+        <td>{{ g[6] }}</td>
+        <td>
+
+            {% if g[6] == 'submitted' %}
+                <a href="/approve-grade/{{ g[0] }}">
+                    ✔ Approve
+                </a>
+            {% elif g[6] == 'approved' %}
+                <span style="color: green;">Approved</span>
+            {% else %}
+                <span style="color: gray;">Draft</span>
+            {% endif %}
+
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+<br>
+<a href="/admin-dashboard">← Back</a>
+
+</div>
+</div>
+
+{% endblock %}

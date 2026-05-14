@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Admin Dashboard</h1>
+<p>Welcome back, {{ session.get('username', 'Admin') }}!</p>
+
+<!-- Quick Stats Row -->
+<div class="stats-row">
+    <div class="stat-card">
+        <span class="stat-number">{{ teacher_count }}</span>
+        <span class="stat-label">Teachers</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-number">{{ student_count }}</span>
+        <span class="stat-label">Students</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-number">{{ subject_count }}</span>
+        <span class="stat-label">Subjects</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-number">{{ section_count }}</span>
+        <span class="stat-label">Sections</span>
+    </div>
+</div>
+
+<!-- Pending Actions -->
+<div class="dashboard-section">
+    <h2>⚠️ Pending Grade Reviews</h2>
+    {% if pending_reviews > 0 %}
+        <p><strong>{{ pending_reviews }}</strong> grade submission(s) waiting for approval.</p>
+        <a href="/admin-grade-review" class="btn-primary">Review Now</a>
+    {% else %}
+        <p class="text-muted">No pending reviews. All caught up!</p>
+    {% endif %}
+</div>
+
+<!-- Recent Activity (optional, can expand later) -->
+<div class="dashboard-section">
+    <h2>📋 Quick Links</h2>
+    <ul class="quick-links">
+        <li><a href="/add-teacher">+ Add New Teacher</a></li>
+        <li><a href="/add-student">+ Add New Student</a></li>
+        <li><a href="/add-subject">+ Add New Subject</a></li>
+        <li><a href="/add-section">+ Add New Section</a></li>
+    </ul>
+</div>
+
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+
+    <div class="card">
+
+        <h1>Teachers List</h1>
+
+        <a href="/add-teacher">➕ Add Teacher</a>
+
+        <br><br>
+
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Department</th>
+                <th>Actions</th>
+            </tr>
+
+            {% for t in teachers %}
+            <tr>
+                <td>{{ t[0] }}</td>
+                <td>{{ t[2] }}</td>
+                <td>{{ t[3] }}</td>
+                <td>{{ t[4] }}</td>
+                <td>{{ t[5] }}</td>
+                <td>
+                    <a href="/edit-teacher/{{ t[0] }}">Edit</a> |
+                    <a href="/delete-teacher/{{ t[0] }}">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        {% if not teachers %}
+        <p style="color: gray; text-align: center;">No teachers synced yet. <a href="/add-teacher">Add a teacher</a></p>
+        {% endif %}
+
+        <br>
+        <a href="/admin-dashboard">← Back to Dashboard</a>
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container">
+
+    <div class="card card-form">
+
+        <h1>Edit Student</h1>
+
+        <form method="POST">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" name="name" value="{{ student[1] }}" required>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Grade Level</label>
+                    <select name="grade_level" required>
+                        <option value="7" {% if student[2] == '7' or student[2] == 7 %}selected{% endif %}>Grade 7</option>
+                        <option value="8" {% if student[2] == '8' or student[2] == 8 %}selected{% endif %}>Grade 8</option>
+                        <option value="9" {% if student[2] == '9' or student[2] == 9 %}selected{% endif %}>Grade 9</option>
+                        <option value="10" {% if student[2] == '10' or student[2] == 10 %}selected{% endif %}>Grade 10</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Section</label>
+                    <select name="section_id" required>
+                        <option value="" disabled>Select Section</option>
+                        {% for sec in sections %}
+                        <option value="{{ sec[0] }}" {% if student[3] == sec[0] %}selected{% endif %}>
+                            Grade {{ sec[1] }} - {{ sec[2] }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit">Update</button>
+            </div>
+
+        </form>
+
+        <a href="/students">← Back to Students List</a>
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container">
+
+    <div class="card card-form">
+
+        <h1>Assign Teacher to Subject</h1>
+
+        <form method="POST">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Teacher</label>
+                    <select name="teacher_id" required>
+                        <option value="" disabled selected>Select Teacher</option>
+                        {% for t in teachers %}
+                        <option value="{{ t[0] }}">{{ t[1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Subject</label>
+                    <select name="subject_id" required>
+                        <option value="" disabled selected>Select Subject</option>
+                        {% for s in subjects %}
+                        <option value="{{ s[0] }}">{{ s[1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit">Assign</button>
+            </div>
+
+        </form>
+
+        <a href="/subjects">← Back to Subjects</a>
+
+    </div>
+
+</div>
+
+{% endblock %}
