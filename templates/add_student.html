@@ -20,7 +20,7 @@
             <div class="form-row">
                 <div class="form-group">
                     <label>Grade Level</label>
-                    <select name="grade_level" required>
+                    <select id="gradeLevel" name="grade_level" required>
                         <option value="" disabled selected>Select Grade Level</option>
                         <option value="7">Grade 7</option>
                         <option value="8">Grade 8</option>
@@ -33,10 +33,10 @@
             <div class="form-row">
                 <div class="form-group">
                     <label>Section</label>
-                    <select name="section_id" required>
+                    <select id="sectionSelect" name="section_id" required>
                         <option value="" disabled selected>Select Section</option>
                         {% for sec in sections %}
-                        <option value="{{ sec[0] }}">
+                        <option value="{{ sec[0] }}" data-grade="{{ sec[1] }}">
                             Grade {{ sec[1] }} - {{ sec[2] }}
                         </option>
                         {% endfor %}
@@ -55,5 +55,35 @@
     </div>
 
 </div>
+
+<script>
+    const gradeLevel = document.getElementById('gradeLevel');
+    const sectionSelect = document.getElementById('sectionSelect');
+    const allOptions = Array.from(sectionSelect.querySelectorAll('option[data-grade]'));
+
+    gradeLevel.addEventListener('change', function() {
+        const selectedGrade = this.value;
+        
+        // Hide all section options
+        allOptions.forEach(option => {
+            option.style.display = 'none';
+        });
+
+        // Show only matching sections
+        if (selectedGrade) {
+            allOptions.forEach(option => {
+                if (option.dataset.grade === selectedGrade) {
+                    option.style.display = 'block';
+                }
+            });
+            sectionSelect.value = ''; // Reset section selection
+        } else {
+            // Show all if no grade selected
+            allOptions.forEach(option => {
+                option.style.display = 'block';
+            });
+        }
+    });
+</script>
 
 {% endblock %}

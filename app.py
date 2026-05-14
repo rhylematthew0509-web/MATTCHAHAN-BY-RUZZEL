@@ -42,7 +42,24 @@ def cleanup_orphaned_teachers():
     except Exception as e:
         print(f"Cleanup error: {e}")
 
+# 🔥 Remove duplicate teachers (keep first, delete duplicates)
+def cleanup_duplicate_teachers():
+    try:
+        cursor.execute("""
+            DELETE FROM teachers 
+            WHERE id NOT IN (
+                SELECT MIN(id) FROM teachers GROUP BY user_id
+            )
+        """)
+        db.commit()
+        deleted = cursor.rowcount
+        if deleted > 0:
+            print(f"✓ Cleaned up {deleted} duplicate teacher record(s)")
+    except Exception as e:
+        print(f"Duplicate cleanup error: {e}")
+
 cleanup_orphaned_teachers()
+cleanup_duplicate_teachers()
 
 @app.route('/')
 def home():
@@ -58,7 +75,7 @@ def teachers():
 
     # 🔥 Show ONLY synced teachers (teachers with valid user accounts)
     cursor.execute("""
-        SELECT 
+        SELECT DISTINCT
             t.id,
             u.id as user_id,
             u.username,
@@ -81,7 +98,7 @@ def add_teacher():
     if request.method == 'POST':
         name = request.form['name']
         email = request.form['email']
-        department = request.form['department']
+        subject = request.form['subject']
         username = request.form['username']
         password = request.form['password']
 
@@ -97,37 +114,48 @@ def add_teacher():
         cursor.execute("""
             INSERT INTO teachers (name, email, department, user_id)
             VALUES (%s, %s, %s, %s)
-        """, (name, email, department, user_id))
+        """, (name, email, subject, user_id))
         db.commit()
 
         return redirect('/teachers')
 
-    return render_template("add_teacher.html")
+    # Load subjects for dropdown
+    cursor.execute("SELECT id, subject_name FROM subjects ORDER BY subject_name")
+    subjects = cursor.fetchall()
+
+    return render_template("add_teacher.html", subjects=subjects)
 
 @app.route('/delete-teacher/<int:id>')
 def delete_teacher(id):
     if not login_required():
         return redirect('/login')
 
-    # Step 1: get user_id first
-    cursor.execute("SELECT user_id FROM teachers WHERE id=%s", (id,))
-    result = cursor.fetchone()
-    if not result:
+    try:
+        # Step 1: get user_id first
+        cursor.execute("SELECT user_id FROM teachers WHERE id=%s", (id,))
+        result = cursor.fetchone()
+        if not result:
+            return redirect('/teachers')
+        user_id = result[0]
+
+        # Step 2: delete relationships first
+        cursor.execute("DELETE FROM teacher_subject WHERE teacher_id=%s", (id,))
+        db.commit()
+
+        # Step 3: delete teacher record
+        cursor.execute("DELETE FROM teachers WHERE id=%s", (id,))
+        db.commit()
+
+        # Step 4: delete user account (cascade delete)
+        if user_id:
+            cursor.execute("DELETE FROM users WHERE id=%s", (user_id,))
+            db.commit()
+        
         return redirect('/teachers')
-    user_id = result[0]
-
-    # Step 2: delete relationships first
-    cursor.execute("DELETE FROM teacher_subject WHERE teacher_id=%s", (id,))
-
-    # Step 3: delete teacher record
-    cursor.execute("DELETE FROM teachers WHERE id=%s", (id,))
-
-    # Step 4: delete user account (cascade delete)
-    if user_id:
-        cursor.execute("DELETE FROM users WHERE id=%s", (user_id,))
-
-    db.commit()
-    return redirect('/teachers')
+    except Exception as e:
+        print(f"Error deleting teacher: {e}")
+        db.rollback()
+        return redirect('/teachers')
 
 @app.route('/edit-teacher/<int:id>', methods=['GET', 'POST'])
 def edit_teacher(id):
@@ -136,10 +164,10 @@ def edit_teacher(id):
     if request.method == 'POST':
         name = request.form['name']
         email = request.form['email']
-        department = request.form['department']
+        subject = request.form['subject']
 
         sql = "UPDATE teachers SET name=%s, email=%s, department=%s WHERE id=%s"
-        cursor.execute(sql, (name, email, department, id))
+        cursor.execute(sql, (name, email, subject, id))
         db.commit()
 
         return redirect('/teachers')
@@ -147,7 +175,11 @@ def edit_teacher(id):
     cursor.execute("SELECT * FROM teachers WHERE id=%s", (id,))
     teacher = cursor.fetchone()
 
-    return render_template('edit_teacher.html', teacher=teacher)
+    # Load subjects for dropdown
+    cursor.execute("SELECT id, subject_name FROM subjects ORDER BY subject_name")
+    subjects = cursor.fetchall()
+
+    return render_template('edit_teacher.html', teacher=teacher, subjects=subjects)
 
 @app.route('/students')
 def students():

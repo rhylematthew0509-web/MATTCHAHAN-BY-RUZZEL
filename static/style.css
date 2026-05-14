@@ -1068,6 +1068,14 @@ body:has(.form-page) form::before {
     cursor: text;
 }
 
+.card-form input[type="email"],
+.card-form input[type="password"],
+.card-form input[type="number"] {
+    background-image: none;
+    padding-right: 14px;
+    cursor: text;
+}
+
 .card-form input:focus,
 .card-form select:focus {
     border-color: var(--gold);
