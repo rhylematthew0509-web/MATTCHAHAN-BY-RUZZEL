@@ -1,3 +1,5 @@
+import os
+
 from flask import Flask, render_template, request, redirect
 from flask import session, redirect, url_for
 import mysql.connector
@@ -11,14 +13,20 @@ def login_required():
 def is_admin():
     return session.get('role') == 'admin'
 
-db = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="root123",
-    database="school_db"
-)
+DB_CONFIG = {
+    'host': os.getenv('DB_HOST', 'localhost'),
+    'user': os.getenv('DB_USER', 'root'),
+    'password': os.getenv('DB_PASSWORD', ''),
+    'database': os.getenv('DB_NAME', 'school_db')
+}
 
-cursor = db.cursor(buffered=True)
+try:
+    db = mysql.connector.connect(**DB_CONFIG)
+    cursor = db.cursor(buffered=True)
+except mysql.connector.Error as err:
+    print("Database connection failed:", err)
+    print("Expected DB settings:", {k: v for k, v in DB_CONFIG.items() if k != 'password'})
+    raise
 
 # 🔥 Cleanup orphaned teacher records on startup
 def cleanup_orphaned_teachers():
