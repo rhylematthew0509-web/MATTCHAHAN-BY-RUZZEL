@@ -28,6 +28,33 @@ except mysql.connector.Error as err:
     print("Expected DB settings:", {k: v for k, v in DB_CONFIG.items() if k != 'password'})
     raise
 
+def get_next_id(table_name):
+    cursor.execute(f"SELECT COALESCE(MAX(id), 0) + 1 FROM {table_name}")
+    return cursor.fetchone()[0]
+
+# 🔥 Normalize existing zero-ID rows for broken tables
+def normalize_zero_ids(table_name, key_columns):
+    columns = ', '.join(key_columns)
+    cursor.execute(f"SELECT {columns} FROM {table_name} WHERE id=0")
+    rows = cursor.fetchall()
+    if not rows:
+        return
+
+    cursor.execute(f"SELECT COALESCE(MAX(id), 0) FROM {table_name}")
+    next_id = cursor.fetchone()[0]
+
+    for row in rows:
+        next_id += 1
+        where_clause = ' AND '.join(f"{col}=%s" for col in key_columns)
+        cursor.execute(
+            f"UPDATE {table_name} SET id=%s WHERE id=0 AND {where_clause} LIMIT 1",
+            (next_id, *row)
+        )
+    db.commit()
+
+normalize_zero_ids('users', ['username', 'password', 'role'])
+normalize_zero_ids('teachers', ['name', 'email', 'department', 'user_id'])
+
 # 🔥 Cleanup orphaned teacher records on startup
 def cleanup_orphaned_teachers():
     try:
@@ -73,15 +100,13 @@ def teachers():
     if not is_admin():
         return "Access Denied: Admin Only"
 
-    # 🔥 Show ONLY synced teachers (teachers with valid user accounts)
     cursor.execute("""
-        SELECT DISTINCT
+        SELECT
             t.id,
-            u.id as user_id,
-            u.username,
+            t.email as login_email,
             t.name,
             t.email,
-            t.department
+            t.department as subject_name
         FROM teachers t
         INNER JOIN users u ON t.user_id = u.id
         WHERE u.role = 'teacher'
@@ -99,22 +124,32 @@ def add_teacher():
         name = request.form['name']
         email = request.form['email']
         subject = request.form['subject']
-        username = request.form['username']
         password = request.form['password']
+        username = email
+
+        # Use email as the teacher login identifier
+        cursor.execute("SELECT COUNT(*) FROM users WHERE username=%s", (username,))
+        if cursor.fetchone()[0] > 0:
+            return "A teacher with this email/login already exists."
+
+        cursor.execute("SELECT COUNT(*) FROM teachers WHERE email=%s", (email,))
+        if cursor.fetchone()[0] > 0:
+            return "A teacher with this email already exists."
 
         # 1. Create user account FIRST (so we have the user_id)
+        user_id = get_next_id('users')
         cursor.execute("""
-            INSERT INTO users (username, password, role)
-            VALUES (%s, %s, 'teacher')
-        """, (username, password))
+            INSERT INTO users (id, username, password, role)
+            VALUES (%s, %s, %s, 'teacher')
+        """, (user_id, username, password))
         db.commit()
-        user_id = cursor.lastrowid
 
         # 2. Insert teacher with user_id linked immediately
+        teacher_id = get_next_id('teachers')
         cursor.execute("""
-            INSERT INTO teachers (name, email, department, user_id)
-            VALUES (%s, %s, %s, %s)
-        """, (name, email, subject, user_id))
+            INSERT INTO teachers (id, name, email, department, user_id)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (teacher_id, name, email, subject, user_id))
         db.commit()
 
         return redirect('/teachers')
@@ -131,31 +166,27 @@ def delete_teacher(id):
         return redirect('/login')
 
     try:
-        # Step 1: get user_id first
         cursor.execute("SELECT user_id FROM teachers WHERE id=%s", (id,))
         result = cursor.fetchone()
         if not result:
             return redirect('/teachers')
         user_id = result[0]
 
-        # Step 2: delete relationships first
         cursor.execute("DELETE FROM teacher_subject WHERE teacher_id=%s", (id,))
-        db.commit()
-
-        # Step 3: delete teacher record
         cursor.execute("DELETE FROM teachers WHERE id=%s", (id,))
-        db.commit()
 
-        # Step 4: delete user account (cascade delete)
         if user_id:
-            cursor.execute("DELETE FROM users WHERE id=%s", (user_id,))
-            db.commit()
-        
-        return redirect('/teachers')
+            cursor.execute("SELECT COUNT(*) FROM teachers WHERE user_id=%s", (user_id,))
+            remaining = cursor.fetchone()[0]
+            if remaining == 0:
+                cursor.execute("DELETE FROM users WHERE id=%s LIMIT 1", (user_id,))
+
+        db.commit()
     except Exception as e:
         print(f"Error deleting teacher: {e}")
         db.rollback()
-        return redirect('/teachers')
+
+    return redirect('/teachers')
 
 @app.route('/edit-teacher/<int:id>', methods=['GET', 'POST'])
 def edit_teacher(id):

@@ -30,7 +30,7 @@
                     <select name="subject" required>
                         <option value="" disabled>Select Subject</option>
                         {% for subj in subjects %}
-                        <option value="{{ subj[0] }}" {% if subj[0]|string == teacher[3]|string %}selected{% endif %}>{{ subj[1] }}</option>
+                        <option value="{{ subj[1] }}" {% if subj[1] == teacher[3] %}selected{% endif %}>{{ subj[1] }}</option>
                         {% endfor %}
                     </select>
                 </div>

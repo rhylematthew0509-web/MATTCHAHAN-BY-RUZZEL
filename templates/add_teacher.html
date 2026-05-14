@@ -16,34 +16,24 @@
                     <input type="text" name="name" required>
                 </div>
                 <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" name="username" required>
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
                     <label>Subject</label>
                     <select name="subject" required>
                         <option value="" disabled selected>Select Subject</option>
                         {% for subj in subjects %}
-                        <option value="{{ subj[0] }}">{{ subj[1] }}</option>
+                        <option value="{{ subj[1] }}">{{ subj[1] }}</option>
                         {% endfor %}
                     </select>
-                </div>
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" name="email" required>
                 </div>
             </div>
 
             <div class="form-row">
                 <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" name="password" required>
+                    <label>Email</label>
+                    <input type="email" name="email" required>
                 </div>
                 <div class="form-group">
-                    <!-- empty spacer -->
+                    <label>Password</label>
+                    <input type="password" name="password" required>
                 </div>
             </div>
 

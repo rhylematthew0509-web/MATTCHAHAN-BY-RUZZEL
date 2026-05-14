@@ -14,7 +14,7 @@
         <table>
             <tr>
                 <th>ID</th>
-                <th>Username</th>
+                <th>Login Email</th>
                 <th>Name</th>
                 <th>Email</th>
                 <th>Subject</th>
@@ -24,10 +24,10 @@
             {% for t in teachers %}
             <tr>
                 <td>{{ t[0] }}</td>
+                <td>{{ t[1] }}</td>
                 <td>{{ t[2] }}</td>
                 <td>{{ t[3] }}</td>
                 <td>{{ t[4] }}</td>
-                <td>{{ t[5] }}</td>
                 <td>
                     <a href="/edit-teacher/{{ t[0] }}">Edit</a> |
                     <a href="/delete-teacher/{{ t[0] }}">Delete</a>
