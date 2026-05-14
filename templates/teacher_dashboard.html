@@ -1,28 +1,86 @@
 {% extends "base.html" %}
 
 {% block content %}
+<div class="container">
 
-<h1>Teacher Dashboard</h1>
+    <h1>Teacher Dashboard</h1>
 
-<h3>Your Assigned Subjects</h3>
+    <div class="dashboard-welcome">
+        <p>Your Assigned Subjects & Sections</p>
+    </div>
 
-<table>
-    <tr>
-        <th>Subject</th>
-        <th>Grade Level</th>
-        <th>Action</th>
-    </tr>
+    <div class="card">
+        <table>
+            <thead>
+                <tr>
+                    <th>Subject</th>
+                    <th>Grade Level</th>
+                    <th>Section</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in assignments %}
+                <tr>
+                    <td>
+                        <div class="subject-cell">
+                            <span class="subject-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+                                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+                                </svg>
+                            </span>
+                            <strong>{{ a[1] }}</strong>
+                        </div>
+                    </td>
+                    <td><span class="grade-badge">Grade {{ a[2] }}</span></td>
+                    <td><span class="section-badge">{{ a[3] }}</span></td>
+                    <td>
+                        {% if a[4] == 'submitted' %}
+                            <span class="status-badge status-submitted">Submitted</span>
+                        {% elif a[4] == 'draft' %}
+                            <span class="status-badge status-draft">Draft</span>
+                        {% else %}
+                            <span class="status-badge status-none">Not Started</span>
+                        {% endif %}
+                    </td>
+                    <td class="actions">
+                        {% if a[4] != 'submitted' %}
+                            <a href="/input-grades/{{ a[0] }}" class="btn-action btn-edit">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                </svg>
+                                Input Grades
+                            </a>
+                        {% endif %}
+                        <a href="/submit-grades/{{ a[0] }}" class="btn-action btn-submit-grade">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                                <path d="M22 4L12 14.01l-3-3"/>
+                            </svg>
+                            Submit Grades
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
 
-    {% for s in subjects %}
-    <tr>
-        <td>{{ s[1] }}</td>
-        <td>{{ s[2] }}</td>
-        <td>
-            <a href="/input-grades/{{ s[0] }}">Input Grades</a> |
-            <a href="/submit-grades/{{ s[0] }}">Submit Grades</a>
-        </td>
-    </tr>
-    {% endfor %}
-</table>
+        {% if not assignments %}
+        <div class="empty-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+                <path d="M12 6v7"/>
+                <path d="M9 9h6"/>
+            </svg>
+            <p>No subjects assigned to you yet.</p>
+            <span class="empty-hint">Contact your administrator to get assigned.</span>
+        </div>
+        {% endif %}
+    </div>
 
+</div>
 {% endblock %}

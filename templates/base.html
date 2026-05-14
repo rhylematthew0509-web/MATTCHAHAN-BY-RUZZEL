@@ -16,14 +16,15 @@
 
         {% if session.get('role') == 'admin' %}
             <a href="/admin-dashboard">Dashboard</a>
+            <a href="/subjects">Subjects</a>
             <a href="/teachers">Teachers</a>
             <a href="/sections">Sections</a>
-            <a href="/subjects">Subjects</a>
             <a href="/students">Students</a>
             <a href="/assign">Assign Teacher</a>
             <a href="/assign-section-subject">Assign Subjects</a>
+            <a href="/assign-teacher-section">Assign Teacher to Section</a>
             <a href="/admin-grade-review">Grade Review</a>
-            <a href="/all-grades">All Grades</a>
+            <a href="/all-grades">Grade Review</a>
         {% endif %}
 
         {% if session.get('role') == 'teacher' %}

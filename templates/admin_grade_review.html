@@ -1,71 +1,81 @@
 {% extends "base.html" %}
 
 {% block content %}
-
 <div class="container">
-<div class="card">
+    <div class="card">
 
-<h1>Grade Review Panel</h1>
+        <h1>Admin Grade Review</h1>
 
-<!-- FILTERS -->
-<form method="GET">
+        <table>
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Subject</th>
+                    <th>Teacher</th>
+                    <th>Grade</th>
+                    <th>Quarter</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for g in grades %}
+                <tr>
+                    <td><strong>{{ g[0] }}</strong></td>
+                    <td><span class="subject-tag">{{ g[1] }}</span></td>
+                    <td>{{ g[2] }}</td>
+                    <td><span class="grade-value">{{ g[3] }}</span></td>
+                    <td><span class="quarter-badge">{{ g[4] }}</span></td>
+                    <td>
+                        {% if g[5] == 'submitted' %}
+                            <span class="status-badge status-submitted">Submitted</span>
+                        {% elif g[5] == 'approved' %}
+                            <span class="status-badge status-approved">Approved</span>
+                        {% elif g[5] == 'draft' %}
+                            <span class="status-badge status-draft">Draft</span>
+                        {% else %}
+                            <span class="status-badge status-none">{{ g[5] }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="actions">
+                        {% if g[5] == 'submitted' %}
+                            <a href="/approve-grade/{{ g[6] }}" class="btn-action btn-approve">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <path d="M20 6L9 17l-5-5"/>
+                                </svg>
+                                Approve
+                            </a>
+                        {% elif g[5] == 'approved' %}
+                            <span class="approved-check">✓ Approved</span>
+                        {% else %}
+                            <span class="pending-text">Pending</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
 
-    <label>Subject:</label>
-    <select name="subject">
-        <option value="">All</option>
-        {% for s in subjects %}
-        <option value="{{ s[0] }}">{{ s[1] }}</option>
-        {% endfor %}
-    </select>
+        {% if not grades %}
+        <div class="empty-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                <path d="M14 2v6h6"/>
+                <path d="M16 13H8M16 17H8M10 9H8"/>
+            </svg>
+            <p>No grades to review.</p>
+            <span class="empty-hint">Teachers need to submit grades first.</span>
+        </div>
+        {% endif %}
 
-    <label>Status:</label>
-    <select name="status">
-        <option value="">All</option>
-        <option value="draft">Draft</option>
-        <option value="submitted">Submitted</option>
-        <option value="approved">Approved</option>
-    </select>
+        <a href="/admin-dashboard" class="back-link">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Back to Dashboard
+        </a>
 
-    <button type="submit">Filter</button>
-</form>
-
-<br>
-
-<!-- TABLE -->
-<table>
-    <tr>
-        <th>Subject</th>
-        <th>Teacher</th>
-        <th>Total Grades</th>
-        <th>Status</th>
-        <th>Action</th>
-    </tr>
-
-    {% for d in data %}
-    <tr>
-        <td>{{ d[1] }}</td>
-        <td>{{ d[2] }}</td>
-        <td>{{ d[3] }}</td>
-        <td>{{ d[4] }}</td>
-        <td>
-
-            {% if d[4] == 'submitted' %}
-                <a href="/approve-grades/{{ d[0] }}">Approve</a>
-            {% elif d[4] == 'approved' %}
-                ✔ Approved
-            {% else %}
-                Draft
-            {% endif %}
-
-        </td>
-    </tr>
-    {% endfor %}
-</table>
-
-<br>
-<a href="/admin-dashboard">← Back</a>
-
-</div>
+    </div>
 </div>
 
 {% endblock %}

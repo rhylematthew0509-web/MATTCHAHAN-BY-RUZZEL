@@ -16,7 +16,7 @@ def is_admin():
 DB_CONFIG = {
     'host': os.getenv('DB_HOST', 'localhost'),
     'user': os.getenv('DB_USER', 'root'),
-    'password': os.getenv('DB_PASSWORD', ''),
+    'password': os.getenv('DB_PASSWORD', 'root123'),
     'database': os.getenv('DB_NAME', 'school_db')
 }
 
@@ -449,7 +449,6 @@ def dashboard():
 
 @app.route('/teacher-dashboard')
 def teacher_dashboard():
-
     if 'user_id' not in session:
         return redirect('/login')
 
@@ -458,12 +457,8 @@ def teacher_dashboard():
 
     user_id = session.get('user_id')
 
-    # 🔥 STEP 1: get actual teacher_id
-    cursor.execute("""
-        SELECT id FROM teachers
-        WHERE user_id = %s
-    """, (user_id,))
-
+    # Get teacher_id
+    cursor.execute("SELECT id FROM teachers WHERE user_id = %s", (user_id,))
     teacher = cursor.fetchone()
 
     if not teacher:
@@ -471,17 +466,69 @@ def teacher_dashboard():
 
     teacher_id = teacher[0]
 
-    # 🔥 STEP 2: get subjects correctly
+    # Get assignments with subject_id explicitly
     cursor.execute("""
-        SELECT subjects.id, subjects.subject_name, subjects.grade_level
-        FROM teacher_subject
-        JOIN subjects ON teacher_subject.subject_id = subjects.id
-        WHERE teacher_subject.teacher_id = %s
+        SELECT 
+            ts.id,
+            s.subject_name,
+            s.grade_level,
+            sec.section_name,
+            ts.subject_id
+        FROM teacher_subject ts
+        JOIN subjects s ON ts.subject_id = s.id
+        JOIN sections sec ON ts.section_id = sec.id
+        WHERE ts.teacher_id = %s
     """, (teacher_id,))
 
-    subjects = cursor.fetchall()
+    rows = cursor.fetchall()
 
-    return render_template("teacher_dashboard.html", subjects=subjects)
+    # Build assignments with status
+    assignments = []
+    for row in rows:
+        ts_id = row[0]
+        subject_name = row[1]
+        grade_level = row[2]
+        section_name = row[3]
+        subject_id = row[4]
+
+        # Debug print (check your console)
+        print(f"DEBUG: ts_id={ts_id}, subject_id={subject_id}, subject_name={subject_name}")
+
+        # Check for submitted grades first
+        cursor.execute("""
+            SELECT 1 FROM grades 
+            WHERE teacher_id = %s AND subject_id = %s AND status = 'submitted'
+            LIMIT 1
+        """, (teacher_id, subject_id))
+        
+        has_submitted = cursor.fetchone()
+        print(f"DEBUG: has_submitted={has_submitted}")
+
+        if has_submitted:
+            status = 'submitted'
+        else:
+            # Check for draft grades
+            cursor.execute("""
+                SELECT 1 FROM grades 
+                WHERE teacher_id = %s AND subject_id = %s AND status = 'draft'
+                LIMIT 1
+            """, (teacher_id, subject_id))
+            
+            has_draft = cursor.fetchone()
+            print(f"DEBUG: has_draft={has_draft}")
+            
+            if has_draft:
+                status = 'draft'
+            else:
+                status = 'none'
+
+        print(f"DEBUG: final status={status}")
+        assignments.append((ts_id, subject_name, grade_level, section_name, status))
+
+    print(f"DEBUG: assignments={assignments}")
+    return render_template("teacher_dashboard.html", assignments=assignments)
+
+
 
 @app.route('/admin-dashboard')
 def admin_dashboard():
@@ -519,8 +566,8 @@ def admin_dashboard():
                            section_count=section_count,
                            pending_reviews=pending_reviews)
 
-@app.route('/input-grades/<int:subject_id>', methods=['GET', 'POST'])
-def input_grades(subject_id):
+@app.route('/input-grades/<int:assignment_id>', methods=['GET', 'POST'])
+def input_grades(assignment_id):
 
     if not login_required():
         return redirect('/login')
@@ -528,11 +575,8 @@ def input_grades(subject_id):
     if session.get('role') != 'teacher':
         return "Access Denied"
 
-    # 🔥 get correct teacher_id
-    cursor.execute("""
-        SELECT id FROM teachers WHERE user_id = %s
-    """, (session.get('user_id'),))
-
+    # Get teacher_id
+    cursor.execute("SELECT id FROM teachers WHERE user_id = %s", (session.get('user_id'),))
     teacher = cursor.fetchone()
 
     if not teacher:
@@ -540,7 +584,22 @@ def input_grades(subject_id):
 
     teacher_id = teacher[0]
 
-    # 🛑 check if already submitted
+    # Look up subject_id and section_id from this assignment
+    cursor.execute("""
+        SELECT subject_id, section_id 
+        FROM teacher_subject 
+        WHERE id = %s AND teacher_id = %s
+    """, (assignment_id, teacher_id))
+    
+    assignment = cursor.fetchone()
+    
+    if not assignment:
+        return "Assignment not found or access denied"
+    
+    subject_id = assignment[0]
+    section_id = assignment[1]
+
+    # Check if already submitted
     cursor.execute("""
         SELECT 1 FROM grades
         WHERE teacher_id=%s AND subject_id=%s AND status='submitted'
@@ -549,14 +608,13 @@ def input_grades(subject_id):
     if cursor.fetchone():
         return "Grades already submitted. Editing is locked."
 
-    # 🔥 get students via section-subject system
+    # Get students from the SPECIFIC section
     cursor.execute("""
-        SELECT DISTINCT students.id, students.name
+        SELECT students.id, students.name
         FROM students
-        JOIN sections ON students.section_id = sections.id
-        JOIN section_subjects ON sections.id = section_subjects.section_id
-        WHERE section_subjects.subject_id = %s
-    """, (subject_id,))
+        WHERE students.section_id = %s
+        ORDER BY students.name
+    """, (section_id,))
 
     students = cursor.fetchall()
 
@@ -567,18 +625,17 @@ def input_grades(subject_id):
         if not quarter:
             return "Quarter is required"
 
-        # 🔥 delete old drafts FIRST (safe place)
+        # Delete old drafts
         cursor.execute("""
             DELETE FROM grades
             WHERE teacher_id=%s AND subject_id=%s AND status='draft'
         """, (teacher_id, subject_id))
 
-        # 🔥 insert grades safely
+        # Insert grades
         for student in students:
             student_id = student[0]
             grade = request.form.get(f'grade_{student_id}')
 
-            # skip empty inputs
             if grade is None or grade.strip() == "":
                 continue
 
@@ -593,8 +650,10 @@ def input_grades(subject_id):
     return render_template(
         "input_grades.html",
         students=students,
-        subject_id=subject_id
+        subject_id=subject_id,
+        section_id=section_id
     )
+
 @app.route('/view-grades')
 def view_grades():
     if not login_required():
@@ -646,8 +705,8 @@ def all_grades():
 
     return render_template("all_grades.html", grades=data)
 
-@app.route('/submit-grades/<int:subject_id>')
-def submit_grades(subject_id):
+@app.route('/submit-grades/<int:assignment_id>')
+def submit_grades(assignment_id):
 
     if not login_required():
         return redirect('/login')
@@ -667,13 +726,18 @@ def submit_grades(subject_id):
 
     teacher_id = teacher[0]
 
-    # 🔥 DEBUG (optional but helpful)
+    # Look up the real subject_id from the assignment
     cursor.execute("""
-        SELECT COUNT(*) FROM grades
-        WHERE teacher_id=%s AND subject_id=%s
-    """, (teacher_id, subject_id))
-
-    print("GRADES FOUND:", cursor.fetchone())
+        SELECT subject_id FROM teacher_subject
+        WHERE id = %s AND teacher_id = %s
+    """, (assignment_id, teacher_id))
+    
+    assignment = cursor.fetchone()
+    
+    if not assignment:
+        return "Assignment not found"
+    
+    subject_id = assignment[0]
 
     # update status
     cursor.execute("""
@@ -685,6 +749,7 @@ def submit_grades(subject_id):
     db.commit()
 
     return redirect('/teacher-dashboard')
+
 
 @app.route('/approve-grades/<int:subject_id>')
 def approve_grades(subject_id):
@@ -975,6 +1040,40 @@ def view_submitted_grades():
     data = cursor.fetchall()
 
     return render_template("view_submitted_grades.html", grades=data)
+
+@app.route('/assign-teacher-section', methods=['GET', 'POST'])
+def assign_teacher_section():
+    if 'user_id' not in session or session.get('role') != 'admin':
+        return "Access Denied"
+
+    if request.method == 'POST':
+        teacher_id = request.form['teacher_id']
+        subject_id = request.form['subject_id']
+        section_id = request.form['section_id']
+
+        cursor.execute("""
+            INSERT INTO teacher_subject (teacher_id, subject_id, section_id)
+            VALUES (%s, %s, %s)
+        """, (teacher_id, subject_id, section_id))
+        
+        db.commit()  # or conn.commit() depending on your setup
+
+        return redirect('/admin-dashboard')
+
+    # GET: fetch dropdown data
+    cursor.execute("SELECT id, name, email FROM teachers ORDER BY name")
+    teachers = cursor.fetchall()
+
+    cursor.execute("SELECT id, subject_name, grade_level FROM subjects ORDER BY subject_name")
+    subjects = cursor.fetchall()
+
+    cursor.execute("SELECT id, grade_level, section_name FROM sections ORDER BY grade_level, section_name")
+    sections = cursor.fetchall()
+
+    return render_template("assign_teacher_section.html", 
+                         teachers=teachers, 
+                         subjects=subjects, 
+                         sections=sections)
 
 @app.route('/logout')
 def logout():
