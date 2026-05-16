@@ -12,17 +12,39 @@
             </svg>
             Add Student
         </a>
-        
-        <form method="GET" action="/students" class="filter-form">
-            <label>Filter by Section</label>
-            <select name="section" onchange="this.form.submit()">
-                <option value="">All Sections</option>
-                {% for sec in sections %}
-                <option value="{{ sec[0] }}" {% if request.args.get('section') == sec[0]|string %}selected{% endif %}>
-                    Grade {{ sec[1] }} - {{ sec[2] }}
-                </option>
-                {% endfor %}
-            </select>
+
+        <form method="GET" action="/students" class="filter-form" id="filterForm">
+            <div class="filter-group">
+                <label>Grade Level</label>
+                <select name="grade_level" id="gradeLevelFilter" onchange="onGradeChange()">
+                    <option value="">All Grades</option>
+                    <option value="7" {% if request.args.get('grade_level') == '7' %}selected{% endif %}>Grade 7</option>
+                    <option value="8" {% if request.args.get('grade_level') == '8' %}selected{% endif %}>Grade 8</option>
+                    <option value="9" {% if request.args.get('grade_level') == '9' %}selected{% endif %}>Grade 9</option>
+                    <option value="10" {% if request.args.get('grade_level') == '10' %}selected{% endif %}>Grade 10</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>Section</label>
+                <select name="section" id="sectionFilter" onchange="this.form.submit()">
+                    <option value="">All Sections</option>
+                    {% for sec in sections %}
+                    <option 
+                        value="{{ sec[0] }}" 
+                        data-grade="{{ sec[1] }}"
+                        {% if request.args.get('section') == sec[0]|string %}selected{% endif %}
+                        style="display: {% if request.args.get('grade_level') and request.args.get('grade_level') != sec[1]|string %}none{% else %}block{% endif %};"
+                    >
+                        Grade {{ sec[1] }} - {{ sec[2] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            {% if request.args.get('grade_level') or request.args.get('section') %}
+            <a href="/students" class="btn-clear">Clear</a>
+            {% endif %}
         </form>
     </div>
 
@@ -61,8 +83,8 @@
                 <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
             </svg>
             <p>No students found.</p>
-            {% if request.args.get('section') %}
-            <a href="/students" class="btn-clear">Clear filter</a>
+            {% if request.args.get('grade_level') or request.args.get('section') %}
+            <a href="/students" class="btn-clear">Clear filters</a>
             {% else %}
             <a href="/add-student" class="btn-add-empty">Add your first student</a>
             {% endif %}
@@ -78,5 +100,45 @@
     </a>
 
 </div>
+
+<script>
+    function onGradeChange() {
+        const gradeSelect = document.getElementById('gradeLevelFilter');
+        const sectionSelect = document.getElementById('sectionFilter');
+        const selectedGrade = gradeSelect.value;
+        const sectionOptions = sectionSelect.querySelectorAll('option[data-grade]');
+
+        // Reset section selection
+        sectionSelect.value = '';
+
+        // Show/hide section options based on grade level
+        sectionOptions.forEach(option => {
+            if (!selectedGrade || option.dataset.grade === selectedGrade) {
+                option.style.display = 'block';
+            } else {
+                option.style.display = 'none';
+            }
+        });
+
+        // Submit the form to filter by grade level
+        document.getElementById('filterForm').submit();
+    }
+
+    // On page load, ensure section dropdown reflects the current grade filter
+    document.addEventListener('DOMContentLoaded', function() {
+        const gradeSelect = document.getElementById('gradeLevelFilter');
+        const sectionSelect = document.getElementById('sectionFilter');
+        const selectedGrade = gradeSelect.value;
+
+        if (selectedGrade) {
+            const sectionOptions = sectionSelect.querySelectorAll('option[data-grade]');
+            sectionOptions.forEach(option => {
+                if (option.dataset.grade !== selectedGrade) {
+                    option.style.display = 'none';
+                }
+            });
+        }
+    });
+</script>
 
 {% endblock %}

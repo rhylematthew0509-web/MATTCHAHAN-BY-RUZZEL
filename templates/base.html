@@ -15,21 +15,19 @@
         <h2>School System</h2>
 
         {% if session.get('role') == 'admin' %}
-            <a href="/admin-dashboard">Dashboard</a>
-            <a href="/subjects">Subjects</a>
-            <a href="/teachers">Teachers</a>
-            <a href="/sections">Sections</a>
-            <a href="/students">Students</a>
-            <a href="/assign">Assign Teacher</a>
-            <a href="/assign-section-subject">Assign Subjects</a>
-            <a href="/assign-teacher-section">Assign Teacher to Section</a>
-            <a href="/admin-grade-review">Grade Review</a>
-            <a href="/all-grades">Grade Review</a>
+            <a href="/admin-dashboard" class="{% if request.path == '/admin-dashboard' %}active{% endif %}">Dashboard</a>
+            <a href="/subjects" class="{% if request.path.startswith('/subjects') or request.path.startswith('/add-subject') or request.path.startswith('/edit-subject') or request.path.startswith('/delete-subject') %}active{% endif %}">Subjects</a>
+            <a href="/teachers" class="{% if request.path.startswith('/teachers') or request.path.startswith('/add-teacher') or request.path.startswith('/edit-teacher') or request.path.startswith('/delete-teacher') or request.path.startswith('/sync-teacher') %}active{% endif %}">Teachers</a>
+            <a href="/sections" class="{% if request.path.startswith('/sections') or request.path.startswith('/add-section') or request.path.startswith('/edit-section') or request.path.startswith('/delete-section') %}active{% endif %}">Sections</a>
+            <a href="/students" class="{% if request.path.startswith('/students') or request.path.startswith('/add-student') or request.path.startswith('/edit-student') or request.path.startswith('/delete-student') or request.path.startswith('/assign-student') %}active{% endif %}">Students</a>
+            <a href="/assign" class="{% if request.path.startswith('/assign') %}active{% endif %}">Assignments</a>
+            <a href="/admin-grade-review" class="{% if request.path == '/admin-grade-review' %}active{% endif %}">Grade Review</a>
+            <a href="/all-grades" class="{% if request.path == '/all-grades' or request.path.startswith('/approve-grade') %}active{% endif %}">All Grades</a>
         {% endif %}
 
         {% if session.get('role') == 'teacher' %}
-            <a href="/teacher-dashboard">Dashboard</a>
-            <a href="/view-submitted-grades">Submitted Grades</a>
+            <a href="/teacher-dashboard" class="{% if request.path.startswith('/teacher-dashboard') or request.path.startswith('/input-grades') or request.path.startswith('/submit-grades') or request.path.startswith('/view-grades') %}active{% endif %}">Dashboard</a>
+            <a href="/view-submitted-grades" class="{% if request.path == '/view-submitted-grades' %}active{% endif %}">Submitted Grades</a>
         {% endif %}
 
         <hr>

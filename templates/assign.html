@@ -1,49 +1,347 @@
 {% extends "base.html" %}
 
 {% block content %}
-
 <div class="container">
-
     <div class="card card-form">
+        <h1>Assignments</h1>
 
-        <h1>Assign Teacher to Subject</h1>
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button class="tab-btn active" onclick="switchTab('teacher-tab')" id="btn-teacher-tab">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
+                Assign Teacher
+            </button>
+            <button class="tab-btn" onclick="switchTab('grade-tab')" id="btn-grade-tab">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+                </svg>
+                Subject to Grade
+            </button>
+        </div>
 
-        <form method="POST">
+        <!-- Tab 1: Assign Teacher to Subject+Section -->
+        <div id="teacher-tab" class="tab-content active">
+            <h2>Assign Teacher to Subject & Section</h2>
+            <p class="tab-desc">Link a teacher to a specific subject and section.</p>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Teacher</label>
-                    <select name="teacher_id" required>
-                        <option value="" disabled selected>Select Teacher</option>
-                        {% for t in teachers %}
-                        <option value="{{ t[0] }}">{{ t[1] }}</option>
-                        {% endfor %}
-                    </select>
+            <form method="POST" action="/assign">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Teacher</label>
+                        <div class="custom-select-wrapper">
+                            <select name="teacher_id" id="teacherSelect" required onchange="updateTeacherDisplay(this)">
+                                <option value="" disabled selected>Select Teacher</option>
+                                {% for t in teachers %}
+                                <option value="{{ t[0] }}" data-name="{{ t[1] }}">{{ t[1] }}</option>
+                                {% endfor %}
+                            </select>
+                            <input type="text" 
+                                   id="teacherSearch" 
+                                   class="teacher-search"
+                                   placeholder="Type to filter teachers..."
+                                   autocomplete="off"
+                                   oninput="filterTeacherOptions(this.value)">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Subject</label>
+                        <select name="subject_id" required>
+                            <option value="" disabled selected>Select Subject</option>
+                            {% for s in subjects %}
+                            <option value="{{ s[0] }}">{{ s[1] }} - Grade {{ s[2] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
-            </div>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Subject</label>
-                    <select name="subject_id" required>
-                        <option value="" disabled selected>Select Subject</option>
-                        {% for s in subjects %}
-                        <option value="{{ s[0] }}">{{ s[1] }}</option>
-                        {% endfor %}
-                    </select>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Section (Optional)</label>
+                        <select name="section_id">
+                            <option value="" selected>All Sections</option>
+                            {% for sec in sections %}
+                            <option value="{{ sec[0] }}">Grade {{ sec[1] }} - {{ sec[2] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
+
+                <div class="form-actions">
+                    <button type="submit">Assign Teacher</button>
+                </div>
+            </form>
+
+            {% if assigned %}
+            <div class="notification success">
+                Teacher assigned successfully.
             </div>
+            {% endif %}
+        </div>
 
-            <div class="form-actions">
-                <button type="submit">Assign</button>
+        <!-- Tab 2: Assign Subject to Grade Level -->
+        <div id="grade-tab" class="tab-content">
+            <h2>Assign Subject to Grade Level</h2>
+            <p class="tab-desc">Set which grade level a subject belongs to.</p>
+
+            <form method="POST" action="/assign-subject-grade-level">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Subject</label>
+                        <select name="subject_id" required>
+                            <option value="" disabled selected>Select Subject</option>
+                            {% for subject in subjects %}
+                            <option value="{{ subject[0] }}">{{ subject[1] }} (Grade {{ subject[2] }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Grade Level</label>
+                        <select name="grade_level" required>
+                            <option value="" disabled selected>Select Grade Level</option>
+                            {% for grade in grades %}
+                            <option value="{{ grade }}">Grade {{ grade }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit">Save Assignment</button>
+                </div>
+            </form>
+
+            {% if updated %}
+            <div class="notification success">
+                Subject grade level assignment updated successfully.
             </div>
+            {% endif %}
 
-        </form>
+            <div class="current-assignments">
+                <h3>Current Subject Grade Assignments</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Subject</th>
+                            <th>Grade Level</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for subject in subjects %}
+                        <tr>
+                            <td><strong>{{ subject[1] }}</strong></td>
+                            <td><span class="grade-badge">Grade {{ subject[2] }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-        <a href="/subjects">← Back to Subjects</a>
-
+        <a href="/admin-dashboard" class="back-link">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Back to Dashboard
+        </a>
     </div>
-
 </div>
+
+<style>
+.tab-nav {
+    display: flex;
+    gap: 8px;
+    margin: 24px 0 20px;
+    border-bottom: 2px solid var(--cream-border);
+    padding-bottom: 0;
+}
+
+.tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    border-radius: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: none;
+    margin-bottom: -2px;
+}
+
+.tab-btn:hover {
+    color: var(--navy);
+    background: transparent;
+    transform: none;
+    box-shadow: none;
+}
+
+.tab-btn.active {
+    color: var(--navy);
+    border-bottom-color: var(--gold);
+    background: transparent;
+}
+
+.tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.tab-desc {
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+    margin-bottom: 20px;
+}
+
+.current-assignments {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--cream-border);
+}
+
+.current-assignments h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    color: var(--navy);
+    margin-bottom: 16px;
+}
+
+.notification {
+    padding: 12px 18px;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin: 16px 0;
+}
+
+.notification.success {
+    background: var(--success-bg);
+    color: var(--success);
+    border-left: 4px solid var(--success);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Custom searchable select */
+.custom-select-wrapper {
+    position: relative;
+}
+
+.custom-select-wrapper select {
+    width: 100%;
+    padding: 10px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9375rem;
+    color: var(--text-dark);
+    background: var(--cream);
+    border: 1.5px solid var(--cream-border);
+    border-radius: var(--radius-sm);
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234A5068' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+}
+
+.custom-select-wrapper select:focus {
+    border-color: var(--gold);
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(232, 163, 32, 0.15);
+}
+
+.teacher-search {
+    width: 100%;
+    padding: 8px 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem;
+    color: var(--text-dark);
+    background: #ffffff;
+    border: 1.5px solid var(--cream-border);
+    border-radius: var(--radius-sm);
+    margin-top: 8px;
+    outline: none;
+}
+
+.teacher-search:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(232, 163, 32, 0.15);
+}
+
+.teacher-search::placeholder {
+    color: var(--text-muted);
+}
+
+</style>
+
+<script>
+function switchTab(tabId) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    // Remove active from all buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    // Show selected tab
+    document.getElementById(tabId).classList.add('active');
+    // Activate button
+    document.getElementById('btn-' + tabId).classList.add('active');
+}
+
+// Auto-switch tab based on URL parameter
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('tab') === 'grade') {
+        switchTab('grade-tab');
+    }
+});
+
+function filterTeacherOptions(query) {
+    const select = document.getElementById('teacherSelect');
+    const options = select.querySelectorAll('option');
+    const lowerQuery = query.toLowerCase();
+
+    options.forEach(function(option) {
+        if (option.value === '') return; // skip placeholder
+        const name = option.getAttribute('data-name').toLowerCase();
+        if (name.includes(lowerQuery)) {
+            option.style.display = '';
+        } else {
+            option.style.display = 'none';
+        }
+    });
+}
+
+function updateTeacherDisplay(select) {
+    // Clear search when a teacher is selected
+    document.getElementById('teacherSearch').value = '';
+    // Show all options again
+    const options = select.querySelectorAll('option');
+    options.forEach(function(option) {
+        option.style.display = '';
+    });
+}
+</script>
 
 {% endblock %}

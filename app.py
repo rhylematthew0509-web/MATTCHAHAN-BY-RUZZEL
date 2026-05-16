@@ -16,7 +16,7 @@ def is_admin():
 DB_CONFIG = {
     'host': os.getenv('DB_HOST', 'localhost'),
     'user': os.getenv('DB_USER', 'root'),
-    'password': os.getenv('DB_PASSWORD', 'root123'),
+    'password': os.getenv('DB_PASSWORD', ''),
     'database': os.getenv('DB_NAME', 'school_db')
 }
 
@@ -88,6 +88,22 @@ def cleanup_duplicate_teachers():
 cleanup_orphaned_teachers()
 cleanup_duplicate_teachers()
 
+# Ensure teacher_subject has section_id column
+def ensure_teacher_subject_section_column():
+    try:
+        cursor.execute("""
+            SELECT COUNT(*) FROM information_schema.columns 
+            WHERE table_name = 'teacher_subject' AND column_name = 'section_id'
+        """)
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("ALTER TABLE teacher_subject ADD COLUMN section_id INT DEFAULT NULL")
+            db.commit()
+            print("Added section_id column to teacher_subject")
+    except Exception as e:
+        print(f"Column check error: {e}")
+
+ensure_teacher_subject_section_column()
+
 @app.route('/')
 def home():
     return "School System is Running!"
@@ -100,31 +116,49 @@ def teachers():
     if not is_admin():
         return "Access Denied: Admin Only"
 
+    # Get teachers with their assigned subjects and grade levels
+    # A teacher can have multiple subject assignments
     cursor.execute("""
-        SELECT
+        SELECT 
             t.id,
-            t.email as login_email,
             t.name,
             t.email,
-            t.department as subject_name
+            s.subject_name,
+            s.grade_level,
+            sec.section_name
         FROM teachers t
         INNER JOIN users u ON t.user_id = u.id
+        LEFT JOIN teacher_subject ts ON t.id = ts.teacher_id
+        LEFT JOIN subjects s ON ts.subject_id = s.id
+        LEFT JOIN sections sec ON ts.section_id = sec.id
         WHERE u.role = 'teacher'
-        ORDER BY t.name ASC
+        ORDER BY s.grade_level ASC, t.name ASC
     """)
-    data = cursor.fetchall()
-    return render_template("teachers.html", teachers=data)
+    rows = cursor.fetchall()
+
+    # Convert to list of dicts for easier template access
+    teachers = []
+    for row in rows:
+        teachers.append({
+            'id': row[0],
+            'name': row[1],
+            'email': row[2],
+            'subject_name': row[3] or 'Unassigned',
+            'grade_level': row[4] or 0,
+            'section_name': row[5] or 'All Sections'
+        })
+
+    return render_template("teachers.html", teachers=teachers)
 
 @app.route('/add-teacher', methods=['GET', 'POST'])
 def add_teacher():
     if not login_required() or not is_admin():
         return redirect('/login')
-        
+
     if request.method == 'POST':
-        name = request.form['name']
-        email = request.form['email']
-        subject = request.form['subject']
-        password = request.form['password']
+        name = request.form['name'].strip()
+        email = request.form['email'].strip()
+        password = request.form['password'].strip()
         username = email
 
         # Use email as the teacher login identifier
@@ -147,18 +181,16 @@ def add_teacher():
         # 2. Insert teacher with user_id linked immediately
         teacher_id = get_next_id('teachers')
         cursor.execute("""
-            INSERT INTO teachers (id, name, email, department, user_id)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (teacher_id, name, email, subject, user_id))
+            INSERT INTO teachers (id, name, email, user_id)
+            VALUES (%s, %s, %s, %s)
+        """, (teacher_id, name, email, user_id))
         db.commit()
+
+        # NOTE: Subject assignment is done separately via /assign page
 
         return redirect('/teachers')
 
-    # Load subjects for dropdown
-    cursor.execute("SELECT id, subject_name FROM subjects ORDER BY subject_name")
-    subjects = cursor.fetchall()
-
-    return render_template("add_teacher.html", subjects=subjects)
+    return render_template("add_teacher.html")
 
 @app.route('/delete-teacher/<int:id>')
 def delete_teacher(id):
@@ -195,10 +227,30 @@ def edit_teacher(id):
     if request.method == 'POST':
         name = request.form['name']
         email = request.form['email']
-        subject = request.form['subject']
+        subject_id = request.form['subject']
+
+        cursor.execute("SELECT subject_name FROM subjects WHERE id=%s", (subject_id,))
+        subject_row = cursor.fetchone()
+        if not subject_row:
+            return "Selected subject not found."
+        department = subject_row[0]
 
         sql = "UPDATE teachers SET name=%s, email=%s, department=%s WHERE id=%s"
-        cursor.execute(sql, (name, email, subject, id))
+        cursor.execute(sql, (name, email, department, id))
+
+        cursor.execute("SELECT id FROM teacher_subject WHERE teacher_id=%s ORDER BY id LIMIT 1", (id,))
+        existing_assignment = cursor.fetchone()
+        if existing_assignment:
+            cursor.execute(
+                "UPDATE teacher_subject SET subject_id=%s WHERE id=%s",
+                (subject_id, existing_assignment[0])
+            )
+        else:
+            cursor.execute(
+                "INSERT INTO teacher_subject (teacher_id, subject_id) VALUES (%s, %s)",
+                (id, subject_id)
+            )
+
         db.commit()
 
         return redirect('/teachers')
@@ -220,29 +272,34 @@ def students():
     if not is_admin():
         return "Access Denied: Admin Only"
 
-    # Get filter parameter
+    # Get filter parameters
     section_filter = request.args.get('section')
+    grade_filter = request.args.get('grade_level')
+
+    query = """
+        SELECT students.id, students.name, students.grade_level,
+               sections.grade_level, sections.section_name
+        FROM students
+        JOIN sections ON students.section_id = sections.id
+        WHERE 1=1
+    """
+    params = []
+
+    if grade_filter:
+        query += " AND students.grade_level = %s"
+        params.append(grade_filter)
 
     if section_filter:
-        cursor.execute("""
-            SELECT students.id, students.name, students.grade_level,
-                   sections.grade_level, sections.section_name
-            FROM students
-            JOIN sections ON students.section_id = sections.id
-            WHERE students.section_id = %s
-        """, (section_filter,))
-    else:
-        cursor.execute("""
-            SELECT students.id, students.name, students.grade_level,
-                   sections.grade_level, sections.section_name
-            FROM students
-            JOIN sections ON students.section_id = sections.id
-        """)
+        query += " AND students.section_id = %s"
+        params.append(section_filter)
 
+    query += " ORDER BY students.grade_level ASC, students.name ASC"
+
+    cursor.execute(query, tuple(params))
     data = cursor.fetchall()
 
     # Load all sections for the filter dropdown
-    cursor.execute("SELECT * FROM sections")
+    cursor.execute("SELECT * FROM sections ORDER BY grade_level ASC, section_name ASC")
     sections = cursor.fetchall()
 
     return render_template("students.html", students=data, sections=sections)
@@ -321,11 +378,24 @@ def subjects():
 
     if not is_admin():
         return "Access Denied: Admin Only"
-    
-    print("SESSION DATA:", session)
 
-    cursor.execute("SELECT * FROM subjects")
+    # Get subjects with their assigned teacher(s)
+    cursor.execute("""
+        SELECT 
+            s.id,
+            s.subject_name,
+            s.grade_level,
+            GROUP_CONCAT(DISTINCT t.name ORDER BY t.name SEPARATOR ', ') as teachers
+        FROM subjects s
+        LEFT JOIN teacher_subject ts ON s.id = ts.subject_id
+        LEFT JOIN teachers t ON ts.teacher_id = t.id
+        GROUP BY s.id, s.subject_name, s.grade_level
+        ORDER BY s.grade_level ASC, s.subject_name ASC
+    """)
     data = cursor.fetchall()
+    print(f"DEBUG SUBJECTS: Found {len(data)} subjects")
+    for row in data:
+        print(f"  {row}")
     return render_template("subjects.html", subjects=data)
 
 @app.route('/add-subject', methods=['GET', 'POST'])
@@ -343,6 +413,28 @@ def add_subject():
         return redirect('/subjects')
 
     return render_template("add_subject.html")
+
+@app.route('/edit-subject/<int:id>', methods=['GET', 'POST'])
+def edit_subject(id):
+    if not login_required():
+        return redirect('/login')
+    if session.get('role') != 'admin':
+        return "Access Denied"
+
+    if request.method == 'POST':
+        subject_name = request.form['subject_name']
+        grade_level = request.form['grade_level']
+
+        cursor.execute("""
+            UPDATE subjects SET subject_name=%s, grade_level=%s WHERE id=%s
+        """, (subject_name, grade_level, id))
+        db.commit()
+        return redirect('/subjects')
+
+    cursor.execute("SELECT * FROM subjects WHERE id=%s", (id,))
+    subject = cursor.fetchone()
+
+    return render_template('edit_subject.html', subject=subject)
 
 @app.route('/delete-subject/<int:id>')
 def delete_subject(id):
@@ -374,36 +466,94 @@ def assign():
     if request.method == 'POST':
         teacher_id = request.form['teacher_id']
         subject_id = request.form['subject_id']
+        section_id = request.form.get('section_id') or None
+        
+        print(f"DEBUG ASSIGN: teacher_id={teacher_id}, subject_id={subject_id}, section_id={section_id}")
+
+        # Check if this exact assignment already exists
+        cursor.execute("""
+            SELECT id FROM teacher_subject 
+            WHERE teacher_id = %s AND subject_id = %s AND section_id <=> %s
+        """, (teacher_id, subject_id, section_id))
+
+        if cursor.fetchone():
+            return "This teacher is already assigned to this subject/section. <a href='/assign'>Go back</a>"
 
         cursor.execute("""
-            INSERT INTO teacher_subject (teacher_id, subject_id)
-            VALUES (%s, %s)
-        """, (teacher_id, subject_id))
+            INSERT INTO teacher_subject (teacher_id, subject_id, section_id)
+            VALUES (%s, %s, %s)
+        """, (teacher_id, subject_id, section_id))
 
         db.commit()
 
-        return redirect('/subjects?assigned=success')
+        return redirect('/assign?assigned=success')
 
-    cursor.execute("SELECT * FROM teachers")
+    # Only show teachers that have valid user accounts (not orphaned)
+    cursor.execute("""
+        SELECT t.id, t.name
+        FROM teachers t
+        INNER JOIN users u ON t.user_id = u.id
+        WHERE u.role = 'teacher'
+        ORDER BY t.name ASC
+    """)
     teachers = cursor.fetchall()
 
-    # 🔥 FILTERED — only these 8 subjects
-    cursor.execute("""
-    SELECT MIN(id) as id, subject_name 
-                    FROM subjects 
-                    GROUP BY subject_name 
-                    ORDER BY subject_name
-                    """)
+    cursor.execute("SELECT id, subject_name, grade_level FROM subjects ORDER BY subject_name")
     subjects = cursor.fetchall()
 
-    return render_template("assign.html", teachers=teachers,subjects=subjects)
+    cursor.execute("SELECT id, grade_level, section_name FROM sections ORDER BY grade_level, section_name")
+    sections = cursor.fetchall()
+
+    # Get grades for the grade-level tab
+    cursor.execute("""
+        SELECT DISTINCT grade_level
+        FROM (
+            SELECT grade_level FROM sections
+            UNION
+            SELECT grade_level FROM subjects
+        ) AS grades
+        WHERE grade_level IS NOT NULL AND grade_level <> ''
+        ORDER BY grade_level
+    """)
+    grades = [row[0] for row in cursor.fetchall()]
+
+    return render_template("assign.html", 
+                         teachers=teachers, 
+                         subjects=subjects, 
+                         sections=sections,
+                         grades=grades,
+                         assigned=request.args.get('assigned'),
+                         updated=request.args.get('updated'))
+
+@app.route('/assign-subject-grade-level', methods=['GET', 'POST'])
+def assign_subject_grade_level():
+    if not login_required():
+        return redirect('/login')
+
+    if session.get('role') != 'admin':
+        return "Access Denied"
+
+    if request.method == 'POST':
+        subject_id = request.form['subject_id']
+        grade_level = request.form['grade_level']
+
+        cursor.execute(
+            "UPDATE subjects SET grade_level=%s WHERE id=%s",
+            (grade_level, subject_id)
+        )
+        db.commit()
+
+        return redirect('/assign?tab=grade&updated=1')
+
+    # Redirect GET requests to the merged page
+    return redirect('/assign?tab=grade')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
 
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+        username = request.form['username'].strip()
+        password = request.form['password'].strip()
 
         cursor.execute(
             "SELECT * FROM users WHERE username=%s AND password=%s",
@@ -472,11 +622,12 @@ def teacher_dashboard():
             ts.id,
             s.subject_name,
             s.grade_level,
-            sec.section_name,
-            ts.subject_id
+            CASE WHEN ts.section_id IS NULL THEN 'All Sections' ELSE sec.section_name END as section_name,
+            ts.subject_id,
+            ts.section_id
         FROM teacher_subject ts
         JOIN subjects s ON ts.subject_id = s.id
-        JOIN sections sec ON ts.section_id = sec.id
+        LEFT JOIN sections sec ON ts.section_id = sec.id
         WHERE ts.teacher_id = %s
     """, (teacher_id,))
 
@@ -490,6 +641,7 @@ def teacher_dashboard():
         grade_level = row[2]
         section_name = row[3]
         subject_id = row[4]
+        section_id = row[5]
 
         # Debug print (check your console)
         print(f"DEBUG: ts_id={ts_id}, subject_id={subject_id}, subject_name={subject_name}")
@@ -608,13 +760,28 @@ def input_grades(assignment_id):
     if cursor.fetchone():
         return "Grades already submitted. Editing is locked."
 
-    # Get students from the SPECIFIC section
-    cursor.execute("""
-        SELECT students.id, students.name
-        FROM students
-        WHERE students.section_id = %s
-        ORDER BY students.name
-    """, (section_id,))
+    # Get students from the SPECIFIC section, or all students in the subject's grade level
+    if section_id is not None:
+        cursor.execute("""
+            SELECT students.id, students.name
+            FROM students
+            WHERE students.section_id = %s
+            ORDER BY students.name
+        """, (section_id,))
+    else:
+        cursor.execute("SELECT grade_level FROM subjects WHERE id = %s", (subject_id,))
+        subject_row = cursor.fetchone()
+        if not subject_row:
+            return "Subject not found"
+
+        grade_level = subject_row[0]
+        cursor.execute("""
+            SELECT s.id, s.name
+            FROM students s
+            JOIN sections sec ON s.section_id = sec.id
+            WHERE sec.grade_level = %s
+            ORDER BY s.name
+        """, (grade_level,))
 
     students = cursor.fetchall()
 
@@ -662,7 +829,11 @@ def view_grades():
     if session.get('role') != 'teacher':
         return "Access Denied"
 
-    teacher_id = session.get('user_id')
+    cursor.execute("SELECT id FROM teachers WHERE user_id = %s", (session.get('user_id'),))
+    teacher = cursor.fetchone()
+    if not teacher:
+        return "Teacher profile not found"
+    teacher_id = teacher[0]
 
     cursor.execute("""
         SELECT students.name, subjects.subject_name, grades.grade, grades.quarter
@@ -833,6 +1004,16 @@ def sections():
 
     return render_template("sections.html", sections=data)
 
+@app.route('/api/section-students/<int:section_id>')
+def api_section_students(section_id):
+    if not login_required():
+        return {"error": "Not logged in"}, 401
+    if not is_admin():
+        return {"error": "Access Denied"}, 403
+    cursor.execute("SELECT name FROM students WHERE section_id = %s ORDER BY name ASC", (section_id,))
+    students = [row[0] for row in cursor.fetchall()]
+    return {"students": students}
+
 @app.route('/add-section', methods=['GET', 'POST'])
 def add_section():
     if not login_required():
@@ -896,11 +1077,6 @@ def delete_section(id):
         UPDATE students SET section_id = NULL WHERE section_id = %s
     """, (id,))
 
-    # 🔥 remove subject assignments
-    cursor.execute("""
-        DELETE FROM section_subjects WHERE section_id = %s
-    """, (id,))
-
     # 🔥 delete section
     cursor.execute("""
         DELETE FROM sections WHERE id = %s
@@ -909,45 +1085,6 @@ def delete_section(id):
     db.commit()
 
     return redirect('/sections')
-
-@app.route('/assign-section-subject', methods=['GET', 'POST'])
-def assign_section_subject():
-    if not login_required():
-        return redirect('/login')
-
-    if not is_admin():
-        return "Access Denied"
-
-    if request.method == 'POST':
-        section_id = request.form['section_id']
-        subject_id = request.form['subject_id']
-
-        cursor.execute("""
-            INSERT INTO section_subjects (section_id, subject_id)
-            VALUES (%s, %s)
-        """, (section_id, subject_id))
-
-        db.commit()
-        return redirect('/assign-section-subject')
-
-    # load sections
-    cursor.execute("SELECT * FROM sections")
-    sections = cursor.fetchall()
-
-    # 🔥 Get one ID per subject name (no duplicates)
-    cursor.execute("""
-        SELECT MIN(id) as id, subject_name 
-        FROM subjects 
-        GROUP BY subject_name 
-        ORDER BY subject_name
-    """)
-    subjects = cursor.fetchall()
-
-    return render_template(
-        "assign_section_subject.html",
-        sections=sections,
-        subjects=subjects
-    )
 
 @app.route('/admin-grade-review')
 def admin_grade_review():
@@ -1061,7 +1198,14 @@ def assign_teacher_section():
         return redirect('/admin-dashboard')
 
     # GET: fetch dropdown data
-    cursor.execute("SELECT id, name, email FROM teachers ORDER BY name")
+    # Only show teachers that have valid user accounts (not orphaned)
+    cursor.execute("""
+        SELECT t.id, t.name
+        FROM teachers t
+        INNER JOIN users u ON t.user_id = u.id
+        WHERE u.role = 'teacher'
+        ORDER BY t.name ASC
+    """)
     teachers = cursor.fetchall()
 
     cursor.execute("SELECT id, subject_name, grade_level FROM subjects ORDER BY subject_name")
@@ -1079,6 +1223,23 @@ def assign_teacher_section():
 def logout():
     session.clear()
     return redirect('/login')
+
+
+@app.route('/api/debug/assignments')
+def debug_assignments():
+    if not login_required():
+        return {"error": "Not logged in"}, 401
+    cursor.execute("SELECT * FROM teacher_subject LIMIT 20")
+    rows = cursor.fetchall()
+    cursor.execute("SELECT * FROM subjects LIMIT 10")
+    subjects = cursor.fetchall()
+    cursor.execute("SELECT id, name FROM teachers LIMIT 10")
+    teachers = cursor.fetchall()
+    return {
+        "teacher_subject": [dict(zip(['id','teacher_id','subject_id','section_id'], row)) for row in rows],
+        "subjects": [dict(zip(['id','subject_name','grade_level'], row)) for row in subjects],
+        "teachers": [dict(zip(['id','name'], row)) for row in teachers]
+    }
 
 if __name__ == "__main__":
     app.run(debug=True)

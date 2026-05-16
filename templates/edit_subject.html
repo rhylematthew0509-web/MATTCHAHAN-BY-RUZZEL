@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container">
+
+    <div class="card card-form">
+
+        <h1>Edit Subject</h1>
+
+        <form method="POST">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Subject Name</label>
+                    <select name="subject_name" required>
+                        <option value="Filipino" {% if subject[1] == 'Filipino' %}selected{% endif %}>Filipino</option>
+                        <option value="Mathematics" {% if subject[1] == 'Mathematics' %}selected{% endif %}>Mathematics</option>
+                        <option value="English" {% if subject[1] == 'English' %}selected{% endif %}>English</option>
+                        <option value="Science" {% if subject[1] == 'Science' %}selected{% endif %}>Science</option>
+                        <option value="TLE" {% if subject[1] == 'TLE' %}selected{% endif %}>TLE</option>
+                        <option value="AP" {% if subject[1] == 'AP' %}selected{% endif %}>AP</option>
+                        <option value="ESP" {% if subject[1] == 'ESP' %}selected{% endif %}>ESP</option>
+                        <option value="MAPEH" {% if subject[1] == 'MAPEH' %}selected{% endif %}>MAPEH</option>
+                        <option value="ICT" {% if subject[1] == 'ICT' %}selected{% endif %}>ICT</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Grade Level</label>
+                    <select name="grade_level" required>
+                        <option value="7" {% if subject[2] == '7' or subject[2] == 7 %}selected{% endif %}>Grade 7</option>
+                        <option value="8" {% if subject[2] == '8' or subject[2] == 8 %}selected{% endif %}>Grade 8</option>
+                        <option value="9" {% if subject[2] == '9' or subject[2] == 9 %}selected{% endif %}>Grade 9</option>
+                        <option value="10" {% if subject[2] == '10' or subject[2] == 10 %}selected{% endif %}>Grade 10</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit">Update</button>
+            </div>
+
+        </form>
+
+        <a href="/subjects">← Back to Subjects List</a>
+
+    </div>
+
+</div>
+
+{% endblock %}
