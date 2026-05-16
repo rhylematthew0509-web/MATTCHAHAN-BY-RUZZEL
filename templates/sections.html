@@ -19,6 +19,10 @@
             <h2 class="grade-heading">Grade {{ grade }}</h2>
 
             <table>
+                <colgroup>
+                    <col style="width: 60%;">
+                    <col style="width: 40%;">
+                </colgroup>
                 <thead>
                     <tr>
                         <th>Section</th>
@@ -163,6 +167,13 @@
 
 .grade-section table {
     margin-top: 0;
+    width: 100%;
+    table-layout: fixed;
+}
+
+.grade-section th,
+.grade-section td {
+    vertical-align: middle;
 }
 
 /* Modal Styles */

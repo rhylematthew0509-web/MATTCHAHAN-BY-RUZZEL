@@ -436,24 +436,37 @@ def edit_subject(id):
 
     return render_template('edit_subject.html', subject=subject)
 
-@app.route('/delete-subject/<int:id>')
-def delete_subject(id):
+@app.route('/delete-subject', methods=['POST'])
+def delete_subject():
+    if not login_required():
+        return redirect(url_for('login'))
+    if session.get('role') != 'admin':
+        return "Access Denied"
+
+    subject_id = request.form.get('subject_id')
+    try:
+        subject_id = int(subject_id)
+    except (TypeError, ValueError):
+        return redirect(url_for('subjects'))
+
+    cursor.execute("SELECT id FROM subjects WHERE id = %s", (subject_id,))
+    if not cursor.fetchone():
+        return redirect(url_for('subjects'))
 
     # 1. delete grades first
-    cursor.execute("DELETE FROM grades WHERE subject_id = %s", (id,))
+    cursor.execute("DELETE FROM grades WHERE subject_id = %s", (subject_id,))
 
     # 2. delete enrollments (IMPORTANT if you added it)
-    cursor.execute("DELETE FROM enrollments WHERE subject_id = %s", (id,))
+    cursor.execute("DELETE FROM enrollments WHERE subject_id = %s", (subject_id,))
 
     # 3. delete teacher assignments
-    cursor.execute("DELETE FROM teacher_subject WHERE subject_id = %s", (id,))
+    cursor.execute("DELETE FROM teacher_subject WHERE subject_id = %s", (subject_id,))
 
     # 4. finally delete subject
-    cursor.execute("DELETE FROM subjects WHERE id = %s", (id,))
+    cursor.execute("DELETE FROM subjects WHERE id = %s LIMIT 1", (subject_id,))
 
     db.commit()
-
-    return redirect('/subjects')
+    return redirect(url_for('subjects'))
 
 @app.route('/assign', methods=['GET', 'POST'])
 def assign():

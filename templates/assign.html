@@ -28,33 +28,49 @@
             <h2>Assign Teacher to Subject & Section</h2>
             <p class="tab-desc">Link a teacher to a specific subject and section.</p>
 
-            <form method="POST" action="/assign">
+            <form method="POST" action="/assign" onsubmit="return validateAssignForm()">
                 <div class="form-row">
                     <div class="form-group">
                         <label>Teacher</label>
-                        <div class="custom-select-wrapper">
-                            <select name="teacher_id" id="teacherSelect" required onchange="updateTeacherDisplay(this)">
-                                <option value="" disabled selected>Select Teacher</option>
+                        <div class="custom-select-wrapper teacher-autocomplete-wrapper">
+                            <input type="text"
+                                   id="teacherInput"
+                                   class="teacher-combo"
+                                   placeholder="Type or select teacher..."
+                                   autocomplete="off"
+                                   required
+                                   oninput="filterTeacherList(this.value)"
+                                   onfocus="filterTeacherList(this.value)"
+                                   onblur="setTimeout(hideTeacherList, 150)">
+                            <div id="teacherList" class="autocomplete-list"></div>
+                            <select id="teacherOptions" hidden>
                                 {% for t in teachers %}
-                                <option value="{{ t[0] }}" data-name="{{ t[1] }}">{{ t[1] }}</option>
+                                <option value="{{ t[1] }}" data-id="{{ t[0] }}"></option>
                                 {% endfor %}
                             </select>
-                            <input type="text" 
-                                   id="teacherSearch" 
-                                   class="teacher-search"
-                                   placeholder="Type to filter teachers..."
-                                   autocomplete="off"
-                                   oninput="filterTeacherOptions(this.value)">
+                            <input type="hidden" name="teacher_id" id="teacherIdInput">
                         </div>
                     </div>
                     <div class="form-group">
                         <label>Subject</label>
-                        <select name="subject_id" required>
-                            <option value="" disabled selected>Select Subject</option>
-                            {% for s in subjects %}
-                            <option value="{{ s[0] }}">{{ s[1] }} - Grade {{ s[2] }}</option>
-                            {% endfor %}
-                        </select>
+                        <div class="custom-select-wrapper subject-autocomplete-wrapper">
+                            <input type="text"
+                                   id="subjectInput"
+                                   class="subject-combo"
+                                   placeholder="Type or select subject..."
+                                   autocomplete="off"
+                                   required
+                                   oninput="filterSubjectList(this.value)"
+                                   onfocus="filterSubjectList(this.value)"
+                                   onblur="setTimeout(hideSubjectList, 150)">
+                            <div id="subjectList" class="autocomplete-list"></div>
+                            <select id="subjectOptions" hidden>
+                                {% for s in subjects %}
+                                <option value="{{ s[1] }} - Grade {{ s[2] }}" data-id="{{ s[0] }}"></option>
+                                {% endfor %}
+                            </select>
+                            <input type="hidden" name="subject_id" id="subjectIdInput">
+                        </div>
                     </div>
                 </div>
 
@@ -243,53 +259,68 @@
     position: relative;
 }
 
-.custom-select-wrapper select {
-    width: 100%;
-    padding: 10px 14px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.9375rem;
-    color: var(--text-dark);
-    background: var(--cream);
-    border: 1.5px solid var(--cream-border);
-    border-radius: var(--radius-sm);
-    outline: none;
-    cursor: pointer;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234A5068' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 14px center;
-    padding-right: 36px;
-}
+    .teacher-autocomplete-wrapper,
+    .subject-autocomplete-wrapper {
+        position: relative;
+    }
 
-.custom-select-wrapper select:focus {
-    border-color: var(--gold);
-    background: #ffffff;
-    box-shadow: 0 0 0 3px rgba(232, 163, 32, 0.15);
-}
+    .custom-select-wrapper select,
+    .custom-select-wrapper input[type="text"] {
+        width: 100%;
+        padding: 10px 14px;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.9375rem;
+        color: var(--text-dark);
+        background: var(--cream);
+        border: 1.5px solid var(--cream-border);
+        border-radius: var(--radius-sm);
+        outline: none;
+    }
 
-.teacher-search {
-    width: 100%;
-    padding: 8px 12px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.875rem;
-    color: var(--text-dark);
-    background: #ffffff;
-    border: 1.5px solid var(--cream-border);
-    border-radius: var(--radius-sm);
-    margin-top: 8px;
-    outline: none;
-}
+    .teacher-combo,
+    .subject-combo {
+        width: 100%;
+        padding: 10px 14px;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.9375rem;
+        color: var(--text-dark);
+        background: #ffffff;
+        border: 1.5px solid var(--cream-border);
+        border-radius: var(--radius-sm);
+        outline: none;
+    }
 
-.teacher-search:focus {
-    border-color: var(--gold);
-    box-shadow: 0 0 0 3px rgba(232, 163, 32, 0.15);
-}
+    .autocomplete-list {
+        position: absolute;
+        z-index: 999;
+        top: calc(100% + 6px);
+        left: 0;
+        right: 0;
+        max-height: 240px;
+        overflow-y: auto;
+        background: #ffffff;
+        border: 1px solid var(--cream-border);
+        border-radius: var(--radius-sm);
+        box-shadow: 0 12px 28px rgba(27, 43, 75, 0.12);
+        display: none;
+    }
 
-.teacher-search::placeholder {
-    color: var(--text-muted);
-}
+    .autocomplete-item {
+        padding: 10px 14px;
+        cursor: pointer;
+        color: var(--text-dark);
+        transition: background 0.15s ease;
+    }
+
+    .autocomplete-item:hover {
+        background: var(--cream);
+        gap: 10px;
+    }
+
+    .subject-search {
+        margin: 0;
+        box-shadow: 0 0 0 0 transparent;
+    }
 
 </style>
 
@@ -317,30 +348,140 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-function filterTeacherOptions(query) {
-    const select = document.getElementById('teacherSelect');
-    const options = select.querySelectorAll('option');
-    const lowerQuery = query.toLowerCase();
+function filterTeacherList(query) {
+    const options = document.getElementById('teacherOptions').options;
+    const list = document.getElementById('teacherList');
+    const lowerQuery = query.trim().toLowerCase();
+    const teacherIdInput = document.getElementById('teacherIdInput');
+    let exactMatchId = '';
 
-    options.forEach(function(option) {
-        if (option.value === '') return; // skip placeholder
-        const name = option.getAttribute('data-name').toLowerCase();
-        if (name.includes(lowerQuery)) {
-            option.style.display = '';
-        } else {
-            option.style.display = 'none';
+    list.innerHTML = '';
+    teacherIdInput.value = '';
+
+    for (let i = 0; i < options.length; i++) {
+        const optionText = options[i].value || '';
+        const optionTextLower = optionText.toLowerCase();
+
+        if (optionTextLower === lowerQuery && lowerQuery !== '') {
+            exactMatchId = options[i].dataset.id;
         }
-    });
+
+        if (!lowerQuery || optionTextLower.includes(lowerQuery)) {
+            const item = document.createElement('div');
+            item.className = 'autocomplete-item';
+            item.textContent = optionText;
+            item.dataset.id = options[i].dataset.id;
+            item.onclick = function() {
+                selectTeacherSuggestion(this.dataset.id, this.textContent);
+            };
+            list.appendChild(item);
+        }
+    }
+
+    if (exactMatchId) {
+        teacherIdInput.value = exactMatchId;
+    }
+
+    if (list.children.length > 0) {
+        list.style.display = 'block';
+    } else {
+        list.style.display = 'none';
+    }
 }
 
-function updateTeacherDisplay(select) {
-    // Clear search when a teacher is selected
-    document.getElementById('teacherSearch').value = '';
-    // Show all options again
-    const options = select.querySelectorAll('option');
-    options.forEach(function(option) {
-        option.style.display = '';
-    });
+function selectTeacherSuggestion(id, name) {
+    const teacherInput = document.getElementById('teacherInput');
+    const teacherIdInput = document.getElementById('teacherIdInput');
+
+    teacherInput.value = name;
+    teacherIdInput.value = id;
+    hideTeacherList();
+}
+
+function hideTeacherList() {
+    const list = document.getElementById('teacherList');
+    if (list) {
+        list.style.display = 'none';
+    }
+}
+
+function filterSubjectList(query) {
+    const options = document.getElementById('subjectOptions').options;
+    const list = document.getElementById('subjectList');
+    const lowerQuery = query.trim().toLowerCase();
+    const subjectIdInput = document.getElementById('subjectIdInput');
+
+    list.innerHTML = '';
+    subjectIdInput.value = '';
+
+    let exactMatchId = '';
+
+    for (let i = 0; i < options.length; i++) {
+        const optionText = options[i].value || '';
+        const optionTextLower = optionText.toLowerCase();
+
+        if (optionTextLower === lowerQuery && lowerQuery !== '') {
+            exactMatchId = options[i].dataset.id;
+        }
+
+        if (!lowerQuery || optionTextLower.includes(lowerQuery)) {
+            const item = document.createElement('div');
+            item.className = 'autocomplete-item';
+            item.textContent = optionText;
+            item.dataset.id = options[i].dataset.id;
+            item.onclick = function() {
+                selectSubjectSuggestion(this.dataset.id, this.textContent);
+            };
+            list.appendChild(item);
+        }
+    }
+
+    if (exactMatchId) {
+        subjectIdInput.value = exactMatchId;
+    }
+
+    if (list.children.length > 0) {
+        list.style.display = 'block';
+    } else {
+        list.style.display = 'none';
+    }
+}
+
+function selectSubjectSuggestion(id, name) {
+    const subjectInput = document.getElementById('subjectInput');
+    const subjectIdInput = document.getElementById('subjectIdInput');
+
+    subjectInput.value = name;
+    subjectIdInput.value = id;
+    hideSubjectList();
+}
+
+function hideSubjectList() {
+    const list = document.getElementById('subjectList');
+    if (list) {
+        list.style.display = 'none';
+    }
+}
+
+function validateAssignForm() {
+    const teacherIdInput = document.getElementById('teacherIdInput');
+    const subjectIdInput = document.getElementById('subjectIdInput');
+    const teacherInput = document.getElementById('teacherInput');
+    const subjectInput = document.getElementById('subjectInput');
+
+    if (!teacherIdInput.value) {
+        alert('Please choose a valid teacher from the list.');
+        teacherInput.focus();
+        return false;
+    }
+
+    if (!subjectIdInput.value) {
+        alert('Please choose a valid subject from the list.');
+        subjectInput.focus();
+        return false;
+    }
+
+    return true;
 }
 </script>
 

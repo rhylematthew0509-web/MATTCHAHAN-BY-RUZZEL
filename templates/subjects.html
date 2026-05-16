@@ -36,10 +36,10 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% set has_subjects = false %}
+                    {% set ns = namespace(has_subjects=false) %}
                     {% for s in subjects %}
                         {% if s[2]|string == grade|string %}
-                            {% set has_subjects = true %}
+                            {% set ns.has_subjects = true %}
                             <tr>
                                 <td><strong>{{ s[1] }}</strong></td>
                                 <td>
@@ -50,20 +50,19 @@
                                     {% endif %}
                                 </td>
                                 <td class="actions">
-                                    <a href="/edit-subject/{{ s[0] }}" class="btn-action btn-edit">Edit</a>
-                                    <a href="/delete-subject/{{ s[0] }}" 
-                                       class="btn-action btn-delete"
-                                       onclick="return confirm('Are you sure you want to delete this subject?')">
-                                       Delete
-                                    </a>
+                                    <a href="{{ url_for('edit_subject', id=s[0]) }}" class="btn-action btn-edit">Edit</a>
+                                    <form method="POST" action="{{ url_for('delete_subject') }}" class="inline-form" onsubmit="return confirm('Are you sure you want to delete this subject?')">
+                                        <input type="hidden" name="subject_id" value="{{ s[0] }}">
+                                        <button type="submit" class="btn-action btn-delete">Delete</button>
+                                    </form>
                                 </td>
                             </tr>
                         {% endif %}
                     {% endfor %}
 
-                    {% if not has_subjects %}
+                    {% if not ns.has_subjects %}
                         <tr>
-                            <td colspan="2" class="empty-grade">
+                            <td colspan="3" class="empty-grade">
                                 <span class="empty-text">No subjects added for Grade {{ grade }} yet.</span>
                             </td>
                         </tr>
@@ -100,6 +99,35 @@
     margin-bottom: 12px;
     padding-bottom: 4px;
     display: inline-block;
+}
+
+.grade-section table {
+    margin-top: 0;
+}
+
+    .inline-form {
+        display: inline-block;
+        margin: 0;
+    }
+
+    .inline-form button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        background: transparent;
+        font: inherit;
+        padding: 0;
+        cursor: pointer;
+    }
+}
+
+.grade-section th:nth-child(2) {
+    width: 30%;
+}
+
+.grade-section th:nth-child(3) {
+    width: 24%;
 }
 
 .teacher-name {
